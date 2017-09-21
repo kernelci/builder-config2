@@ -107,3 +107,38 @@
     - compiler
     - install
     - mips
+
+- stat:
+    path: "/usr/clang+llvm-5.0.0-linux-x86_64-ubuntu16.04.tar.xz"
+  register: clang_x86_compiler
+  tags:
+    - compiler
+    - install
+    - clang
+
+- name: Get clang for x86
+  get_url:
+    url: "http://releases.llvm.org/5.0.0/clang+llvm-5.0.0-linux-x86_64-ubuntu16.04.tar.xz"
+    force: no
+    dest: "/usr/clang+llvm-5.0.0-linux-x86_64-ubuntu16.04.tar.xz"
+  tags:
+    - compiler
+    - install
+    - clang
+    
+- name: Install clang for x86
+  unarchive:
+    remote_src: yes
+    src: "/usr/clang+llvm-5.0.0-linux-x86_64-ubuntu16.04.tar.xz"
+    dest: "/usr/"
+    extra_opts:
+      - -a
+    owner: root
+    group: root
+  when: clang_x86_compiler.stat.exists == false
+  tags:
+    - compiler
+    - install
+    - clang
+
+
