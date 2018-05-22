@@ -2,3 +2,4 @@
 - include: packages.yml
 - include: compilers.yml
 - include: users.yml
+- include: docker.yml
