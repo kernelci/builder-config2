@@ -45,3 +45,20 @@
     name: buildslave
     groups: docker
     append: yes
+
+- name: KVM exists
+  tags:
+    - docker
+  stat:
+    path: /dev/kvm
+  register: dev_kvm
+  
+- name: Expose /dev/kvm
+  tags:
+    - docker
+  file:
+    path: /dev/kvm
+    group: buildslave
+    mode: g+rw
+  when: dev_kvm.stat.exists == True
+  
