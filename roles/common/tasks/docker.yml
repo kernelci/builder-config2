@@ -37,3 +37,11 @@
     update_cache: yes
   with_items:
     - docker-ce
+
+- name: Add build user to docker group
+  tags:
+    - docker
+  user:
+    name: buildslave
+    groups: docker
+    append: yes
