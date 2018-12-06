@@ -14,7 +14,7 @@
     - packages
 
 - name: Install packages for Ubuntu and Debian Stretch
-  when: (ansible_distribution == "Debian" and ansible_distribution_version == "stretch/sid") or
+  when: (ansible_distribution == "Debian" and ansible_distribution_release == "stretch") or
         (ansible_distribution == "Ubuntu" and ansible_distribution_release == "xenial")
   apt:
     pkg: "{{ item }}"
