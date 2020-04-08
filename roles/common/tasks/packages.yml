@@ -1,27 +1,24 @@
 ---
-- name: Install packages for Debian Jessie
+- name: Install packages for Debian Buster
   when:
     - ansible_distribution == "Debian"
-    - ansible_distribution_release == "jessie"
+    - ansible_distribution_release == "buster"
   apt:
-    pkg: "{{ item }}"
+    pkg: ['openjdk-11-jre-headless']
     state: latest
     update_cache: yes
-  with_items:
-    - openjdk-7-jre-headless
   tags:
     - install
     - packages
 
-- name: Install packages for Ubuntu and Debian Stretch
-  when: (ansible_distribution == "Debian" and ansible_distribution_version == "stretch/sid") or
-        (ansible_distribution == "Ubuntu" and ansible_distribution_release == "xenial")
+- name: Install packages for Ubuntu
+  when:
+    - ansible_distribution == "Ubuntu"
+    - ansible_distribution_release == "xenial"
   apt:
-    pkg: "{{ item }}"
+    pkg: ['openjdk-8-jre-headless']
     state: latest
     update_cache: yes
-  with_items:
-    - openjdk-8-jre-headless
   tags:
     - install
     - packages
