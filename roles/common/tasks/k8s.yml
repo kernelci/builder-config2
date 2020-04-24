@@ -1,0 +1,222 @@
+#
+# Installer dependencies
+#
+- name: Install k8s dependency packages
+  tags:
+    - k8s
+  apt:
+    pkg:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - gnupg2
+    state: latest
+    update_cache: yes
+
+- name: k8s cleanup (re)init
+  tags:
+    - k8s
+    - k8s-cleanup
+  file:
+    state: absent
+    path: /home/buildslave/.kube/config
+
+#
+# Google Cloud SDK
+# c.f. https://cloud.google.com/sdk/docs/quickstart-debian-ubuntu
+#
+- name: Add gcloud-sdk apt key
+  tags:
+    - gcloud
+    - k8s
+  apt_key:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    keyring: /usr/share/keyrings/cloud.google.gpg
+    state: present
+
+- name: Add gcloud-sdk repo
+  tags:
+    - gcloud
+    - k8s
+  apt_repository:
+    repo: deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main
+    state: present
+    filename: google-cloud-sdk
+
+- name: Install gcloud
+  tags:
+    - gcloud
+    - k8s
+  apt:
+    pkg:
+    - google-cloud-sdk
+    - kubectl
+    state: latest
+    update_cache: yes
+
+- name: Cleanup gcloud auth
+  tags:
+    - gcloud-auth
+    - gcloud
+    - k8s
+  file:
+    state: absent
+    path: /home/buildslave/.config/gcloud
+
+- name: Create temp file for service-account key
+  tags:
+    - gcloud-auth
+    - gcloud
+    - k8s
+  become: yes
+  become_user: buildslave
+  tempfile:
+    state: file
+    suffix: ".json"
+  register: gcloud_keyfile
+
+- name: Copy gcloud service-account key
+  tags:
+    - gcloud-auth
+    - gcloud
+    - k8s
+  become: yes
+  become_user: buildslave
+  copy:
+    src: group_vars/android-kernelci-external-db4480e9cdf0.json
+    dest: "{{ gcloud_keyfile.path }}"
+    owner: buildslave
+    group: buildslave
+    mode: '0600'
+
+- name: Setup gcloud-sdk auth
+  tags:
+    - gcloud-auth
+    - gcloud
+    - k8s
+  become: yes
+  become_user: buildslave
+  vars:
+    keyfile: "{{ gcloud_keyfile.path }}"
+    project: "android-kernelci-external"
+  shell: |
+    gcloud auth activate-service-account --key-file {{ keyfile }}
+    gcloud config set project {{ project }}
+    rm -f {{ keyfile }}
+
+- name: Get gcloud-sdk kubectl credentials
+  tags:
+    - gcloud
+    - k8s
+  become: yes
+  become_user: buildslave
+  vars:
+    resource_group: "kernelci"
+  shell: gcloud container clusters get-credentials {{ item.name }} --region {{ item.region }}
+  loop:
+    - {name: "kci-eu-west1", region: "europe-west1-d"}
+    - {name: "kci-us-west1", region: "us-west1-a"}
+    - {name: "kci-us-central1", region: "us-central1-c"}
+    - {name: "kci-big-us-east4", region: "us-east4-c"}
+    - {name: "kci-eu-west4", region: "europe-west4-c"}
+
+#
+# Azure CLI
+# c.f. https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-apt?view=azure-cli-latest
+#
+
+- name: Add Azure CLI apt key
+  tags:
+    - azure
+    - k8s
+  apt_key:
+    url: https://packages.microsoft.com/keys/microsoft.asc
+    state: present
+
+- name: Add Azure CLI apt repo
+  tags:
+    - azure
+    - k8s
+  apt_repository:
+    repo: deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ {{ ansible_distribution_release }} main
+    state: present
+    filename: azure-cli
+
+- name: Install Azure CLI
+  tags:
+    - azure
+    - k8s
+  apt:
+    pkg:
+    - azure-cli
+    state: latest
+    update_cache: yes
+
+- name: Azure CLI cleanup auth
+  tags:
+    - azure-auth
+    - azure
+    - k8s
+  file:
+    state: absent
+    path: /home/buildslave/.azure
+
+- name: Azure CLI get auth credentials
+  tags:
+    - azure-auth
+    - azure
+    - k8s
+  become: yes
+  become_user: buildslave
+  include_vars:
+    file: group_vars/azure.yml
+    name: azure-secrets
+
+- name: Azure CLI set auth credentials
+  tags:
+    - azure-auth
+    - azure
+    - k8s
+  become: yes
+  become_user: buildslave
+  shell: |
+    az login --service-principal -u {{ azure_user }} -p {{ azure_key }} --tenant {{ azure_tenant }}
+
+- name: Get Azure kubectl credentials
+  tags:
+    - azure
+    - k8s
+  become: yes
+  become_user: buildslave
+  shell: az aks get-credentials --resource-group {{ azure_resource }} --name {{ item.name }}
+  loop:
+    - {name: "aks-kci-france-central"}
+    - {name: "aks-kci-us-east2"}
+    - {name: "aks-kci-uk-south"}
+
+#
+# K8S common
+#
+# NOTE: this only needs to be done on a single host since it
+#       configures the k8s cluster, not the ansible host
+#
+- name: Get KCI auth tokens
+  tags:
+    - k8s-secrets
+  become: yes
+  become_user: buildslave
+  include_vars:
+    file: group_vars/kci_tokens.yml
+    name: kci_tokens
+
+# add KCI secrets to all k8s clusters
+- name: Kubernetes common cluster config
+  tags:
+    - k8s-secrets
+  become: yes
+  become_user: buildslave
+  shell: |
+    for ctx in $(kubectl config get-contexts -o name); do
+      kubectl --context $ctx create secret generic {{ item.name }} --from-literal=token={{ item.token }} --dry-run=client -o yaml | kubectl --context $ctx apply -f -
+    done
+  loop: "{{ kci_tokens.tokens }}"
