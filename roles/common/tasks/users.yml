@@ -125,3 +125,25 @@
     - install
     - user
     - secrets
+
+- name: Create the build user ssh dir
+  file:
+    path: "/home/buildslave/.ssh"
+    state: directory
+    owner: buildslave
+    group: buildslave
+    mode: 0700
+  tags:
+    - user
+    - setup
+
+- name: Setup the authorized_keys file for the build user
+  copy:
+    src: buildslave_authorized_keys
+    dest: "/home/buildslave/.ssh/authorized_keys"
+    owner: buildslave
+    group: buildslave
+    mode: 0600
+  tags:
+    - user
+    - setup
