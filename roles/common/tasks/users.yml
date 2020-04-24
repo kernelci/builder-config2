@@ -1,4 +1,11 @@
 ---
+
+# -----------------------------------------------------------------------------
+# deploy_user
+#
+# Some servers are set up with a special username with root uid.  This is
+# called the deploy_user here.
+
 - name: Create dedicated deploy user for other builders
   when: deploy_user is defined
   user:
@@ -38,8 +45,34 @@
     - setup
 
 
+# -----------------------------------------------------------------------------
+# admin_user
+#
+# Some servers have a regular user pre-installed with sudo rights, typically
+# 'kernelci'.  This is called the admin_user here.  Simply install the
+# authorized public keys for it.
+
+- name: Setup the authorized_keys file for the admin user
+  when: admin_user is defined
+  copy:
+    src: authorized_keys
+    dest: "/home/{{ admin_user }}/.ssh/authorized_keys"
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: 0600
+  tags:
+    - user
+    - setup
+
+
+# -----------------------------------------------------------------------------
+# root user
+#
+# Some servers only have a root user defined with ssh enabled.  This is the
+# default when there is no deploy_user or admin_user defined.
+
 - name: Create the root user ssh dir
-  when: deploy_user is not defined
+  when: deploy_user is not defined and admin_user is not defined
   file:
     path: "/root/.ssh"
     state: directory
@@ -69,6 +102,14 @@
   tags:
     - install
     - user
+
+
+# -----------------------------------------------------------------------------
+# buildslave user
+#
+# The Jenkins client needs to have ssh access to the node with an unpriviledged
+# user, called the buildslave user here.  Old builders used a password, newer
+# ones use an ssh key.
 
 - name: Create the build user
   user:
