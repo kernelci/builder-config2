@@ -2,15 +2,14 @@
   tags:
     - docker
   apt:
-    pkg: "{{ item }}"
-    state: latest
-    update_cache: yes
-  with_items:
+    pkg:
     - apt-transport-https
     - ca-certificates
     - curl
     - gnupg2
     - software-properties-common
+    state: latest
+    update_cache: yes
 
 # Add specified repository into sources list using specified filename.
 - name: Add docker key
@@ -32,11 +31,9 @@
   tags:
     - docker
   apt:
-    pkg: "{{ item }}"
+    pkg: docker-ce
     state: latest
     update_cache: yes
-  with_items:
-    - docker-ce
 
 - name: Add build user to docker group
   tags:
@@ -61,4 +58,3 @@
     group: buildslave
     mode: g+rw
   when: dev_kvm.stat.exists == True
-  
