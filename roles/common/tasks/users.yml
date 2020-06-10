@@ -95,7 +95,7 @@
     - user
     - setup
 
-- name: Craete the build group
+- name: Create the build group
   group:
     name: buildslave
     state: present
