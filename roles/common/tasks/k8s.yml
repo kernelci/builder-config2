@@ -68,12 +68,23 @@
     - gcloud-auth
     - gcloud
     - k8s
-  become: yes
-  become_user: buildslave
   tempfile:
     state: file
     suffix: ".json"
   register: gcloud_keyfile
+
+- name: Change ownership of temp file for service-account key
+  tags:
+    - gcloud-auth
+    - gcloud
+    - k8s
+  file:
+    path: "{{ gcloud_keyfile.path }}"
+    state: file
+    owner: buildslave
+    group: buildslave
+    mode: 0644
+  when: gcloud_keyfile.path is defined
 
 - name: Copy gcloud service-account key
   tags:
