@@ -72,7 +72,7 @@
 # default when there is no deploy_user or admin_user defined.
 
 - name: Create the root user ssh dir
-  when: deploy_user is not defined and admin_user is not defined
+  when: deploy_user is not defined
   file:
     path: "/root/.ssh"
     state: directory
