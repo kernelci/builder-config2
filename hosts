@@ -30,6 +30,8 @@ azure-kernelci4
 azure-kernelci6
 azure-kernelci7
 azure-kernelci9
+azure-kernelci-jenkins-usa
+azure-kernelci-jenkins-europe
 
 [kernel-builders:children]
 collabora
