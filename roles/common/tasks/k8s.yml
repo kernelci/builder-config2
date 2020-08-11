@@ -181,7 +181,7 @@
   become_user: buildslave
   include_vars:
     file: group_vars/azure.yml
-    name: azure-secrets
+    name: azure_secrets
 
 - name: Azure CLI set auth credentials
   tags:
@@ -191,7 +191,7 @@
   become: yes
   become_user: buildslave
   shell: |
-    az login --service-principal -u {{ azure_user }} -p {{ azure_key }} --tenant {{ azure_tenant }}
+    az login --service-principal -u {{ azure_secrets.azure_user }} -p {{ azure_secrets.azure_key }} --tenant {{ azure_secrets.azure_tenant }}
 
 - name: Get Azure kubectl credentials
   tags:
@@ -199,7 +199,7 @@
     - k8s
   become: yes
   become_user: buildslave
-  shell: az aks get-credentials --resource-group {{ azure_resource }} --name {{ item.name }}
+  shell: az aks get-credentials --resource-group {{ azure_secrets.azure_resource }} --name {{ item.name }}
   loop:
     - {name: "aks-kci-france-central"}
     - {name: "aks-kci-us-east2"}
@@ -214,6 +214,7 @@
 - name: Get KCI auth tokens
   tags:
     - k8s-secrets
+    - never
   become: yes
   become_user: buildslave
   include_vars:
@@ -224,6 +225,7 @@
 - name: Kubernetes common cluster config
   tags:
     - k8s-secrets
+    - never
   become: yes
   become_user: buildslave
   shell: |
