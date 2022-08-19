@@ -233,3 +233,35 @@
       kubectl --context $ctx create secret generic {{ item.name }} --from-literal=token={{ item.token }} --dry-run=client -o yaml | kubectl --context $ctx apply -f -
     done
   loop: "{{ kci_tokens.tokens }}"
+
+- name: Create /home/buildslave/bin
+  tags:
+    - k8s-scripts
+    - never
+  file:
+    path: "/home/buildslave/bin"
+    state: directory
+    owner: buildslave
+    group: buildslave
+    mode: 0755
+    
+- name: Add k8s helper shell scripts
+  tags:
+    - k8s-scripts
+    - never
+  copy:
+    src: k8s/cleanup.sh
+    dest: "/home/buildslave/bin/k8s-cleanup.sh"
+    owner: buildslave
+    group: buildslave
+    mode: 0755
+
+- name: Daily cron for k8s garbage collection
+  tags:
+    - k8s-scripts
+    - never
+  ansible.builtin.cron:
+    name: "k8s garbage collection"
+    special_time: "daily"
+    job: "/home/buildslave/bin/k8s-cleanup.sh"
+    user: buildslave
