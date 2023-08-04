@@ -115,6 +115,19 @@
     gcloud config set project {{ project }}
     rm -f {{ keyfile }}
 
+# https://cloud.google.com/blog/products/containers-kubernetes/kubectl-auth-changes-in-gke
+# apt google-cloud-sdk-gke-gcloud-auth-plugin
+- name: Install gke-gcloud-auth-plugin
+  tags:
+    - gcloud-auth
+    - gcloud
+    - k8s
+  apt:
+    pkg:
+    - google-cloud-sdk-gke-gcloud-auth-plugin
+    state: latest
+    update_cache: yes
+
 - name: Get gcloud-sdk kubectl credentials
   tags:
     - gcloud
@@ -172,16 +185,18 @@
     state: absent
     path: /home/buildslave/.azure
 
-- name: Azure CLI get auth credentials
-  tags:
-    - azure-auth
-    - azure
-    - k8s
-  become: yes
-  become_user: buildslave
-  include_vars:
-    file: group_vars/azure.yml
-    name: azure_secrets
+# Advice how to setup Azure MSI by az cli, should be done by sysadmin with necessary permissions:
+#
+#    RG1_ID=$(az group show -n rg-kernelci-aks-us-east2 --query id -o tsv)
+#    RG2_ID=$(az group show -n rg-kernelci-aks-s-cent-us --query id -o tsv)
+#    RG3_ID=$(az group show -n rg-kernelci-aks-uk-south --query id -o tsv)
+#    RG4_ID=$(az group show -n rg-kernelci-aks-us-west3 --query id -o tsv)
+#    az vm identity assign -g ${VM_RG} -n ${VM_NAME}
+#    VM_PRINCIPAL_ID=$(az vm show -n ${VM_NAME} -g ${VM_RG} --query identity.principalId -o tsv)
+#    az role assignment create --role "Contributor" --assignee $VM_PRINCIPAL_ID --scope $RG1_ID
+#    az role assignment create --role "Contributor" --assignee $VM_PRINCIPAL_ID --scope $RG2_ID
+#    az role assignment create --role "Contributor" --assignee $VM_PRINCIPAL_ID --scope $RG3_ID
+#    az role assignment create --role "Contributor" --assignee $VM_PRINCIPAL_ID --scope $RG4_ID
 
 - name: Azure CLI set auth credentials
   tags:
@@ -191,7 +206,10 @@
   become: yes
   become_user: buildslave
   shell: |
-    az login --service-principal -u {{ azure_secrets.azure_user }} -p {{ azure_secrets.azure_key }} --tenant {{ azure_secrets.azure_tenant }}
+    echo "If this fails, check note in k8s.yml about how to setup MSI for Azure VMs"
+    az login --identity
+
+
 
 - name: Get Azure kubectl credentials
   tags:
@@ -199,11 +217,12 @@
     - k8s
   become: yes
   become_user: buildslave
-  shell: az aks get-credentials --resource-group {{ azure_secrets.azure_resource }} --name {{ item.name }}
+  shell: az aks get-credentials --resource-group {{ item.resource_group }} --name {{ item.name }}
   loop:
-    - {name: "aks-kci-france-central"}
-    - {name: "aks-kci-us-east2"}
-    - {name: "aks-kci-uk-south"}
+    - {name: "aks-kbuild-medium-1", resource_group: "rg-kernelci-aks-us-east2"}
+    - {name: "aks-kbuild-medium-2", resource_group: "rg-kernelci-aks-s-cent-us"}
+    - {name: "aks-kbuild-medium-3", resource_group: "rg-kernelci-aks-us-west3"}
+    - {name: "aks-kbuild-big-1", resource_group: "rg-kernelci-aks-uk-south"}
 
 #
 # K8S common

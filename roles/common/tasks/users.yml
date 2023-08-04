@@ -148,3 +148,15 @@
   tags:
     - user
     - setup
+
+- name: Create workspace directory for buildslave
+  file:
+    path: "/data/workspace"
+    state: directory
+    owner: buildslave
+    group: buildslave
+    mode: 0755
+  tags:
+    - user
+    - setup
+

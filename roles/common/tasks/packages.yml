@@ -11,14 +11,37 @@
     - install
     - packages
 
-- name: Install packages for Ubuntu
+- name: Install packages for Debian Bullseye
   when:
-    - ansible_distribution == "Ubuntu"
-    - ansible_distribution_release == "xenial"
+    - ansible_distribution == "Debian"
+    - ansible_distribution_release == "bullseye"
   apt:
-    pkg: ['openjdk-8-jre-headless']
+    pkg: ['openjdk-11-jre-headless']
     state: latest
     update_cache: yes
+  tags:
+    - install
+    - packages
+
+# To avoid issue: https://github.com/georchestra/ansible/issues/55
+# "Failed to set permissions on the temporary files Ansible needs to create when becoming an unprivileged user"
+- name: Install packages for ansible
+  when:
+    - ansible_distribution == "Debian"
+  apt:
+    pkg: ['acl']
+    state: latest
+    update_cache: yes
+  tags:
+    - install
+    - packages
+
+# If not Debian - show error, we support Debian only for now
+- name: Show error if not Debian
+  when:
+    - ansible_distribution != "Debian"
+  debug:
+    msg: "This playbook supports Debian only for now"
   tags:
     - install
     - packages
